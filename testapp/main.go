@@ -31,7 +31,7 @@ func main() {
 		booksAPI.Get("/from/{target}", appCtx.getOtherBooks)
 	}
 
-	app.Listen(":8080")
+	app.Run(iris.Addr(":8080"))
 }
 
 // Book example.

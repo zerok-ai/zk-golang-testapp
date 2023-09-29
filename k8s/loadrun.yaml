@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: loadrun
+  name: loadrun-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loadrun
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: loadrun
+    spec:
+      containers:
+        - args:
+            - |-
+              while true; do sleep 15; curl -w "[%{http_code}] %{url} %{time_total}s \n"  http://bookstore1.bookstore.svc.cluster.local/books -o /dev/null -s; done;
+          command:
+            - sh
+            - -c
+            - --
+          image: alpine/curl
+          imagePullPolicy: Always
+          name: curl
+          resources:
+            limits:
+              cpu: "2"
+              memory: 1Gi
+            requests:
+              cpu: 10m
+              memory: 40Mi

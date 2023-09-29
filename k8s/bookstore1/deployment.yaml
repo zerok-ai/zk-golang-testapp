@@ -13,6 +13,9 @@ spec:
     metadata:
       labels:
         app: bookstore1
+      annotations:
+        instrumentation.opentelemetry.io/inject-go: 'true'
+        instrumentation.opentelemetry.io/otel-go-auto-target-exe: '/testapp/testapp'
     spec:
       containers:
         - name: bookstore1
@@ -20,3 +23,9 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
+          securityContext:
+            capabilities:
+              add:
+                - SYS_PTRACE
+            privileged: true
+            runAsUser: 0

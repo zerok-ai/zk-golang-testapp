@@ -8,3 +8,9 @@ buildAndPush: build
 
 deploy:
 	kubectl apply -k ./k8s
+
+delete:
+	kubectl delete -k ./k8s
+
+instrument:
+	kubectl apply -f Otel/instrumentation.yaml
