@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore1-deployment
+  labels:
+    app: bookstore1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore1
+  template:
+    metadata:
+      labels:
+        app: bookstore1
+    spec:
+      containers:
+        - name: bookstore1
+          image: us-west1-docker.pkg.dev/zerok-dev/golang-testapp/testapp:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080

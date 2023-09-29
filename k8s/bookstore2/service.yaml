@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore2
+spec:
+  selector:
+    app: bookstore2
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080

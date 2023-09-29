@@ -1,0 +1,5 @@
+resources:
+  - namespace.yaml
+  - bookstore1
+  - bookstore2
+namespace: bookstore
