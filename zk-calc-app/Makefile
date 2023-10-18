@@ -1,3 +1,34 @@
+NAME = zk-calc-app
+IMAGE_NAME = zk-calc-app
+IMAGE_VERSION = latest
+
+LOCATION ?= us-west1
+PROJECT_ID ?= zerok-dev
+REPOSITORY ?= test-apps
+
+sync:
+	go get -v ./...
+
+build: sync
+	go build -v -o $(NAME) main.go
+
+docker-build: sync
+	CGO_ENABLED=0 GOOS=linux $(ARCH) go build -v -o $(NAME) main.go
+	docker build --no-cache -t $(IMAGE_PREFIX)$(IMAGE_NAME):$(IMAGE_VERSION) .
+
+docker-build-gke: IMAGE_PREFIX := $(LOCATION)-docker.pkg.dev/$(PROJECT_ID)/$(REPOSITORY)/
+docker-build-gke: ARCH := GOARCH=amd64
+docker-build-gke: docker-build
+
+docker-push-gke: IMAGE_PREFIX := $(LOCATION)-docker.pkg.dev/$(PROJECT_ID)/$(REPOSITORY)/
+docker-push-gke:
+	docker push $(IMAGE_PREFIX)$(IMAGE_NAME):$(IMAGE_VERSION)
+
+docker-build-push-gke: docker-build-gke docker-push-gke
+
+
+
+#Testing
 generate-proto:
 	protoc --go_out=. --go-grpc_out=. calculator.proto
 

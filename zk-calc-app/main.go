@@ -37,7 +37,7 @@ func (s *calculatorServer) CallOtherAdd(ctx context.Context, req *calculator.Add
 	forward := req.Forward
 	traceparent := extractTraceParent(ctx)
 	log.Println("found traceParent ", traceparent)
-	conn, err := grpc.Dial(forward+".zk-calc-app.svc.cluster.local:50051", grpc.WithInsecure())
+	conn, err := grpc.Dial(forward+".zk-calc-app.svc.cluster.local:80", grpc.WithInsecure())
 	//conn, err := grpc.Dial("localhost:"+forward, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
@@ -72,7 +72,7 @@ func (s *calculatorServer) CallOtherSubtract(ctx context.Context, req *calculato
 	forward := req.Forward
 	traceparent := extractTraceParent(ctx)
 	log.Println("found traceParent ", traceparent)
-	conn, err := grpc.Dial(forward+".zk-calc-app.svc.cluster.local:50051", grpc.WithInsecure())
+	conn, err := grpc.Dial(forward+".zk-calc-app.svc.cluster.local:80", grpc.WithInsecure())
 	//conn, err := grpc.Dial("localhost:"+forward, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)

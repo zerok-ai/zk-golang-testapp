@@ -1,28 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: calculator2-deployment
+  name: zk-calc-app-02
   labels:
-    app: calculator2
+    app: zk-calc-app-02
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: calculator2
+      app: zk-calc-app-02
   template:
     metadata:
       labels:
-        app: calculator2
+        app: zk-calc-app-02
       annotations:
         instrumentation.opentelemetry.io/inject-go: 'true'
         instrumentation.opentelemetry.io/otel-go-auto-target-exe: '/testapp/testapp'
     spec:
       containers:
-        - name: calculator2
-          image: us-west1-docker.pkg.dev/zerok-dev/golang-testapp/testapp:latest
+        - name: zk-calc-app-02
+          image: us-west1-docker.pkg.dev/zerok-dev/test-apps/zk-calc-app:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
+            - containerPort: 80
           securityContext:
             capabilities:
               add:
