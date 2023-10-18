@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: loadrun
+  name: loadrun-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loadrun
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: loadrun
+    spec:
+      containers:
+        - args:
+            - |-
+              while true; do sleep 15; grpcurl -plaintext -d '{"a": 5, "b": 3}' localhost:50051 calculator.Calculator.Add; done;
+          command:
+            - sh
+            - -c
+            - --
+          image: alpine/curl
+          imagePullPolicy: Always
+          name: curl
+          resources:
+            limits:
+              cpu: "2"
+              memory: 1Gi
+            requests:
+              cpu: 10m
+              memory: 40Mi

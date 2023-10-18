@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calculator1-deployment
+  labels:
+    app: calculator1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calculator1
+  template:
+    metadata:
+      labels:
+        app: calculator1
+      annotations:
+        instrumentation.opentelemetry.io/inject-go: 'true'
+        instrumentation.opentelemetry.io/otel-go-auto-target-exe: '/testapp/testapp'
+    spec:
+      containers:
+        - name: calculator1
+          image: us-west1-docker.pkg.dev/zerok-dev/golang-testapp/testapp:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          securityContext:
+            capabilities:
+              add:
+                - SYS_PTRACE
+            privileged: true
+            runAsUser: 0
