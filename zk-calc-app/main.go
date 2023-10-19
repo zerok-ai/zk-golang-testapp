@@ -29,8 +29,8 @@ func extractTraceParent(ctx context.Context) string {
 }
 
 func createCalculatorClient(serviceName string) (calculator.CalculatorClient, *grpc.ClientConn, error) {
-	//conn, err := grpc.Dial(serviceName+".zk-calc-app.svc.cluster.local:80", grpc.WithInsecure())
-	conn, err := grpc.Dial("localhost:"+serviceName, grpc.WithInsecure())
+	conn, err := grpc.Dial(serviceName+".zk-calc-app.svc.cluster.local:80", grpc.WithInsecure())
+	//conn, err := grpc.Dial("localhost:"+serviceName, grpc.WithInsecure())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -112,6 +112,7 @@ func (s *calculatorServer) Restricted(ctx context.Context, req *calculator.Restr
 	result := int32(0)
 	log.Println("forward: ", forward)
 	if forward == "" {
+		fmt.Printf("Restricted result in destination")
 		err := status.Error(codes.InvalidArgument, "Invalid argument provided")
 		return nil, err
 	} else {
@@ -139,6 +140,7 @@ func (s *calculatorServer) Error(ctx context.Context, req *calculator.ErrorReque
 
 	log.Println("forward: ", forward)
 	if forward == "" {
+		fmt.Printf("Error result in destination")
 		err := status.Error(codes.Code(req.Code), "Some custom error")
 		return nil, err
 	} else {
@@ -150,7 +152,7 @@ func (s *calculatorServer) Error(ctx context.Context, req *calculator.ErrorReque
 		withoutForward := &calculator.ErrorRequest{Code: req.Code, Forward: ""}
 		_, err = calcClient.Error(getContext(ctx, traceparent), withoutForward)
 		if err != nil {
-			log.Printf("Forwarded restricted request failed: %v", err)
+			log.Printf("Forwarded error request failed: %v", err)
 			return nil, err
 		}
 	}
