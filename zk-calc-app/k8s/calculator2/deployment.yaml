@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: zk-calc-app-02
-          image: us-west1-docker.pkg.dev/zerok-dev/test-apps/zk-calc-app:0.0.2-test
+          image: us-west1-docker.pkg.dev/zerok-dev/test-apps/zk-calc-app:0.0.3-all
           imagePullPolicy: Always
           ports:
             - containerPort: 80

@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 	"log"
 	"net"
 	"os"
@@ -26,74 +28,167 @@ func extractTraceParent(ctx context.Context) string {
 	return ""
 }
 
-func (s *calculatorServer) Add(ctx context.Context, req *calculator.AddRequest) (*calculator.AddResponse, error) {
-	log.Println("found traceParent ", extractTraceParent(ctx))
-
-	result := req.A + req.B
-	fmt.Printf("Add result in destination: %d\n", result)
-	return &calculator.AddResponse{Result: result}, nil
-}
-func (s *calculatorServer) CallOtherAdd(ctx context.Context, req *calculator.AddRequest) (*calculator.AddResponse, error) {
-	forward := req.Forward
-	traceparent := extractTraceParent(ctx)
-	log.Println("found traceParent ", traceparent)
-	conn, err := grpc.Dial(forward+".zk-calc-app.svc.cluster.local:80", grpc.WithInsecure())
-	//conn, err := grpc.Dial("localhost:"+forward, grpc.WithInsecure())
+func createCalculatorClient(serviceName string) (calculator.CalculatorClient, *grpc.ClientConn, error) {
+	//conn, err := grpc.Dial(serviceName+".zk-calc-app.svc.cluster.local:80", grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:"+serviceName, grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("Failed to connect: %v", err)
+		return nil, nil, err
 	}
-	defer conn.Close()
-
 	client := calculator.NewCalculatorClient(conn)
+	return client, conn, nil
+}
 
-	// Call the Add operation
+func getContext(ctx context.Context, traceparent string) context.Context {
 	//md := metadata.New(map[string]string{
-	//	"traceparent": traceparent, // Replace with your actual access token
+	//	"traceparent": *traceparent, // Replace with your actual access token
 	//})
 	//
 	//outCtx := metadata.NewOutgoingContext(context.Background(), md)
-	//
-	//addResponse, err := client.Add(outCtx, req)
-	addResponse, err := client.Add(ctx, req)
-	if err != nil {
-		log.Fatalf("Add request failed: %v", err)
+	//return outCtx
+	return ctx
+}
+
+func (s *calculatorServer) Add(ctx context.Context, req *calculator.AddRequest) (*calculator.AddResponse, error) {
+	traceparent := extractTraceParent(ctx)
+	log.Println("found traceParent ", traceparent)
+	forward := req.Forward
+
+	result := int32(0)
+	log.Println("forward: ", forward)
+	if forward == "" {
+		result = req.A + req.B
+		fmt.Printf("Add result in destination: %d\n", result)
+	} else {
+		calcClient, conn, err := createCalculatorClient(forward)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+		withoutForward := &calculator.AddRequest{A: req.A, B: req.B, Forward: ""}
+		addResponse, err := calcClient.Add(getContext(ctx, traceparent), withoutForward)
+		if err != nil {
+			log.Printf("Forwarded add request failed: %v", err)
+			return nil, err
+		}
+		result = addResponse.Result
 	}
-	fmt.Printf("Add result in source: %d\n", addResponse.Result)
-	return addResponse, nil
+
+	return &calculator.AddResponse{Result: result}, nil
+}
+
+func (s *calculatorServer) Divide(ctx context.Context, req *calculator.DivideRequest) (*calculator.DivideResponse, error) {
+	traceparent := extractTraceParent(ctx)
+	log.Println("found traceParent ", traceparent)
+	forward := req.Forward
+
+	result := int32(0)
+	log.Println("forward: ", forward)
+	if forward == "" {
+		result = req.A / req.B
+		fmt.Printf("Divide result in destination: %d\n", result)
+	} else {
+		calcClient, conn, err := createCalculatorClient(forward)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+		withoutForward := &calculator.DivideRequest{A: req.A, B: req.B, Forward: ""}
+		divideResponse, err := calcClient.Divide(getContext(ctx, traceparent), withoutForward)
+		if err != nil {
+			log.Printf("Forwarded divide request failed: %v", err)
+			return nil, err
+		}
+		result = divideResponse.Result
+	}
+
+	return &calculator.DivideResponse{Result: result}, nil
+}
+
+func (s *calculatorServer) Restricted(ctx context.Context, req *calculator.RestrictedRequest) (*calculator.RestrictedResponse, error) {
+	traceparent := extractTraceParent(ctx)
+	log.Println("found traceParent ", traceparent)
+	forward := req.Forward
+
+	result := int32(0)
+	log.Println("forward: ", forward)
+	if forward == "" {
+		err := status.Error(codes.InvalidArgument, "Invalid argument provided")
+		return nil, err
+	} else {
+		calcClient, conn, err := createCalculatorClient(forward)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+		withoutForward := &calculator.RestrictedRequest{A: req.A, Forward: ""}
+		restrictedResponse, err := calcClient.Restricted(getContext(ctx, traceparent), withoutForward)
+		if err != nil {
+			log.Printf("Forwarded restricted request failed: %v", err)
+			return nil, err
+		}
+		result = restrictedResponse.Result
+	}
+
+	return &calculator.RestrictedResponse{Result: result}, nil
+}
+
+func (s *calculatorServer) Error(ctx context.Context, req *calculator.ErrorRequest) (*calculator.ErrorResponse, error) {
+	traceparent := extractTraceParent(ctx)
+	log.Println("found traceParent ", traceparent)
+	forward := req.Forward
+
+	log.Println("forward: ", forward)
+	if forward == "" {
+		err := status.Error(codes.Code(req.Code), "Some custom error")
+		return nil, err
+	} else {
+		calcClient, conn, err := createCalculatorClient(forward)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+		withoutForward := &calculator.ErrorRequest{Code: req.Code, Forward: ""}
+		_, err = calcClient.Error(getContext(ctx, traceparent), withoutForward)
+		if err != nil {
+			log.Printf("Forwarded restricted request failed: %v", err)
+			return nil, err
+		}
+	}
+
+	return &calculator.ErrorResponse{}, nil
 }
 
 func (s *calculatorServer) Subtract(ctx context.Context, req *calculator.SubtractRequest) (*calculator.SubtractResponse, error) {
-	log.Println("found traceParent ", extractTraceParent(ctx))
-	result := req.A - req.B
-	fmt.Printf("Subtract result in destination: %d\n", result)
-	return &calculator.SubtractResponse{Result: result}, nil
-}
+	//log.Println("found traceParent ", extractTraceParent(ctx))
+	//result := req.A - req.B
+	//fmt.Printf("Subtract result in destination: %d\n", result)
+	//return &calculator.SubtractResponse{Result: result}, nil
 
-func (s *calculatorServer) CallOtherSubtract(ctx context.Context, req *calculator.SubtractRequest) (*calculator.SubtractResponse, error) {
-	forward := req.Forward
 	traceparent := extractTraceParent(ctx)
 	log.Println("found traceParent ", traceparent)
-	conn, err := grpc.Dial(forward+".zk-calc-app.svc.cluster.local:80", grpc.WithInsecure())
-	//conn, err := grpc.Dial("localhost:"+forward, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("Failed to connect: %v", err)
-	}
-	defer conn.Close()
+	forward := req.Forward
 
-	client := calculator.NewCalculatorClient(conn)
-
-	// Call the Add operation
-	//md := metadata.New(map[string]string{
-	//	"traceparent": traceparent, // Replace with your actual access token
-	//})
-	//outCtx := metadata.NewOutgoingContext(context.Background(), md)
-	//subtractResponse, err := client.Subtract(outCtx, req)
-	subtractResponse, err := client.Subtract(ctx, req)
-	if err != nil {
-		log.Fatalf("Subtract request failed: %v", err)
+	result := int32(0)
+	log.Println("forward: ", forward)
+	if forward == "" {
+		result = req.A - req.B
+		fmt.Printf("Subtract result in destination: %d\n", result)
+	} else {
+		calcClient, conn, err := createCalculatorClient(forward)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+		withoutForward := &calculator.SubtractRequest{A: req.A, B: req.B, Forward: ""}
+		subtractResponse, err := calcClient.Subtract(getContext(ctx, traceparent), withoutForward)
+		if err != nil {
+			log.Printf("Forwarded subtract request failed: %v", err)
+			return nil, err
+		}
+		result = subtractResponse.Result
 	}
-	fmt.Printf("Subtract result in source: %d\n", subtractResponse.Result)
-	return subtractResponse, nil
+
+	return &calculator.SubtractResponse{Result: result}, nil
 }
 
 func (s *calculatorServer) mustEmbedUnimplementedCalculatorServer() {}

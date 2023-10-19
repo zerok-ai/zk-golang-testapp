@@ -1,6 +1,6 @@
 NAME = zk-calc-app
 IMAGE_NAME = zk-calc-app
-IMAGE_VERSION = 0.0.2-test
+IMAGE_VERSION = 0.0.3-all
 
 LOCATION ?= us-west1
 PROJECT_ID ?= zerok-dev
@@ -27,11 +27,11 @@ docker-push-gke:
 docker-build-push-gke: docker-build-gke docker-push-gke
 
 
-
-#Testing
+#Proto generation
 generate-proto:
 	protoc --go_out=. --go-grpc_out=. calculator.proto
 
+#Testing
 grpcurl-list:
 	grpcurl -plaintext localhost:50051 list
 

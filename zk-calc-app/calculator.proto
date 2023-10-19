@@ -5,9 +5,37 @@ option go_package = "/calculator/";
 
 service Calculator {
   rpc Add (AddRequest) returns (AddResponse);
-  rpc CallOtherAdd (AddRequest) returns (AddResponse);
+  rpc Divide (DivideRequest) returns (DivideResponse);
+  rpc Error (ErrorRequest) returns (ErrorResponse);
+  rpc Restricted (RestrictedRequest) returns (RestrictedResponse);
   rpc Subtract (SubtractRequest) returns (SubtractResponse);
-  rpc CallOtherSubtract (SubtractRequest) returns (SubtractResponse);
+}
+
+message ErrorRequest {
+  uint32 code = 1;
+  string forward = 2;
+}
+
+message ErrorResponse {
+}
+
+message RestrictedRequest {
+  int32 a = 1;
+  string forward = 2;
+}
+
+message RestrictedResponse {
+  int32 result = 1;
+}
+
+message DivideRequest {
+  int32 a = 1;
+  int32 b = 2;
+  string forward = 3;
+}
+
+message DivideResponse {
+  int32 result = 1;
 }
 
 message AddRequest {
