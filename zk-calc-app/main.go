@@ -47,13 +47,14 @@ func (s *calculatorServer) CallOtherAdd(ctx context.Context, req *calculator.Add
 	client := calculator.NewCalculatorClient(conn)
 
 	// Call the Add operation
-	md := metadata.New(map[string]string{
-		"traceparent": traceparent, // Replace with your actual access token
-	})
-
-	outCtx := metadata.NewOutgoingContext(context.Background(), md)
-
-	addResponse, err := client.Add(outCtx, req)
+	//md := metadata.New(map[string]string{
+	//	"traceparent": traceparent, // Replace with your actual access token
+	//})
+	//
+	//outCtx := metadata.NewOutgoingContext(context.Background(), md)
+	//
+	//addResponse, err := client.Add(outCtx, req)
+	addResponse, err := client.Add(ctx, req)
 	if err != nil {
 		log.Fatalf("Add request failed: %v", err)
 	}
@@ -82,11 +83,12 @@ func (s *calculatorServer) CallOtherSubtract(ctx context.Context, req *calculato
 	client := calculator.NewCalculatorClient(conn)
 
 	// Call the Add operation
-	md := metadata.New(map[string]string{
-		"traceparent": traceparent, // Replace with your actual access token
-	})
-	outCtx := metadata.NewOutgoingContext(context.Background(), md)
-	subtractResponse, err := client.Subtract(outCtx, req)
+	//md := metadata.New(map[string]string{
+	//	"traceparent": traceparent, // Replace with your actual access token
+	//})
+	//outCtx := metadata.NewOutgoingContext(context.Background(), md)
+	//subtractResponse, err := client.Subtract(outCtx, req)
+	subtractResponse, err := client.Subtract(ctx, req)
 	if err != nil {
 		log.Fatalf("Subtract request failed: %v", err)
 	}
