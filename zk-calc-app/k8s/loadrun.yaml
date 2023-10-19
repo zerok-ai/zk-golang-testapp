@@ -18,7 +18,7 @@ spec:
       containers:
         - args:
             - |-
-              while true; do sleep 15; grpcurl -plaintext -d '{"a": 5, "b": 3, "forward": "zk-calc-app-02"}' -H "traceparent: 00-0018317d2edc7d4cfa75b39e88c2d570-176069a07e84acaf-01" zk-calc-app-01.zk-calc-app.svc.cluster.local:80 calculator.Calculator.CallOtherAdd; done;
+              while true; do sleep 15; grpcurl -plaintext -d '{"a": 5, "b": 3, "forward": "zk-calc-app-02"}' -H 'traceparent: 00-cccccccc'$(tr -dc 'a-f0-9' < /dev/urandom | head -c24)'-'$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)'-01' zk-calc-app-01.zk-calc-app.svc.cluster.local:80 calculator.Calculator.CallOtherAdd; done;
           command:
             - sh
             - -c
