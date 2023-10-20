@@ -1,6 +1,7 @@
 resources:
   - namespace.yaml
   - loadrun.yaml
+  - loadrun-error.yaml
   - calculator1
   - calculator2
 namespace: zk-calc-app
