@@ -1,0 +1,140 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    instrumentation.opentelemetry.io/inject-go: default/demo-instrumentation-golang
+    instrumentation.opentelemetry.io/otel-go-auto-target-exe: /zk/zk-calc-app
+  creationTimestamp: "2023-10-23T05:54:02Z"
+  generateName: zk-calc-app-01-688cd44f77-
+  labels:
+    app: zk-calc-app-01
+    pod-template-hash: 688cd44f77
+  name: zk-calc-app-01-688cd44f77-gtqsc
+  namespace: zk-calc-app
+  ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: zk-calc-app-01-688cd44f77
+      uid: bdd55e26-8f56-4284-9679-ef17964028bd
+  resourceVersion: "4739392"
+  uid: b58aac0f-cd3e-46b8-bc0e-e21e029bacae
+spec:
+  containers:
+    - image: us-west1-docker.pkg.dev/zerok-dev/test-apps-public/zk-calc-app:0.0.3-all
+      imagePullPolicy: Always
+      name: zk-calc-app-01
+      ports:
+        - containerPort: 80
+          protocol: TCP
+      resources: {}
+      securityContext:
+        capabilities:
+          add:
+            - SYS_PTRACE
+        privileged: true
+        runAsUser: 0
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access-jqkh6
+          readOnly: true
+    - env:
+        - name: OTEL_GO_AUTO_TARGET_EXE
+          value: /zk/zk-calc-app
+        - name: OTEL_TRACES_EXPORTER
+          value: otlp
+        - name: OTEL_METRICS_EXPORTER
+          value: none
+        - name: OTEL_LOGS_EXPORTER
+          value: none
+        - name: OTEL_LOG_LEVEL
+          value: DEBUG
+        - name: OTEL_SERVICE_NAME
+          value: zk-calc-app-01
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://aws-otel-collector.default.svc.cluster.local:4317
+        - name: OTEL_RESOURCE_ATTRIBUTES_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: OTEL_RESOURCE_ATTRIBUTES_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: OTEL_PROPAGATORS
+          value: tracecontext,baggage
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: k8s.container.name=zk-calc-app-01,k8s.deployment.name=zk-calc-app-01,k8s.namespace.name=zk-calc-app,k8s.node.name=$(OTEL_RESOURCE_ATTRIBUTES_NODE_NAME),k8s.pod.name=$(OTEL_RESOURCE_ATTRIBUTES_POD_NAME),k8s.replicaset.name=zk-calc-app-01-688cd44f77,service.version=0.0.3-all
+      image: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.3.0-alpha
+      imagePullPolicy: IfNotPresent
+      name: opentelemetry-auto-instrumentation
+      resources:
+        limits:
+          cpu: 500m
+          memory: 32Mi
+        requests:
+          cpu: 50m
+          memory: 32Mi
+      securityContext:
+        capabilities:
+          add:
+            - SYS_PTRACE
+        privileged: true
+        runAsUser: 0
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+        - mountPath: /sys/kernel/debug
+          name: kernel-debug
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access-jqkh6
+          readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: ip-10-0-2-119.us-east-2.compute.internal
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  shareProcessNamespace: true
+  terminationGracePeriodSeconds: 30
+  tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+  volumes:
+    - name: kube-api-access-jqkh6
+      projected:
+        defaultMode: 420
+        sources:
+          - serviceAccountToken:
+              expirationSeconds: 3607
+              path: token
+          - configMap:
+              items:
+                - key: ca.crt
+                  path: ca.crt
+              name: kube-root-ca.crt
+          - downwardAPI:
+              items:
+                - fieldRef:
+                    apiVersion: v1
+                    fieldPath: metadata.namespace
+                  path: namespace
+    - hostPath:
+        path: /sys/kernel/debug
+        type: ""
+      name: kernel-debug

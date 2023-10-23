@@ -1,10 +1,10 @@
 NAME = zk-calc-app
 IMAGE_NAME = zk-calc-app
-IMAGE_VERSION = 0.0.3-all
+IMAGE_VERSION = 0.0.4-trace-transfer
 
 LOCATION ?= us-west1
 PROJECT_ID ?= zerok-dev
-REPOSITORY ?= test-apps
+REPOSITORY ?= test-apps-public
 
 sync:
 	go get -v ./...
