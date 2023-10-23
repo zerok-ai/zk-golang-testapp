@@ -1,13 +1,47 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/baggage"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"io"
+	"log"
 	"net/http"
 )
 
+func InitAutoTracer() {
+
+	ctx := context.Background()
+
+	client := otlptracehttp.NewClient()
+
+	otlpTraceExporter, err := otlptrace.New(ctx, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	batchSpanProcessor := sdktrace.NewBatchSpanProcessor(otlpTraceExporter)
+
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(batchSpanProcessor),
+		//trace.WithSampler(sdktrace.AlwaysSample()), - please check TracerProvider.WithSampler() implementation for details.
+	)
+
+	otel.SetTracerProvider(tracerProvider)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{}, propagation.Baggage{}))
+}
+
 func main() {
+	InitAutoTracer()
+
 	http.HandleFunc("/books", list)
 	http.HandleFunc("/books/from", getOtherBooks)
 
@@ -48,8 +82,14 @@ func getOtherBooks(w http.ResponseWriter, r *http.Request) {
 
 	// Make the HTTP GET request.
 	//response, err := http.Get(url)
-	client := &http.Client{}
-	response, err := client.Get(url)
+
+	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
+	ctx := baggage.ContextWithoutBaggage(context.Background())
+	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
+	response, err := client.Do(req)
+
+	//client := &http.Client{}
+	//response, err := client.Get(url)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		//ctx.WriteString(fmt.Sprintf("Failed to make the HTTP GET request: %s", err.Error()))
