@@ -22,7 +22,7 @@ spec:
         beta.kubernetes.io/arch: amd64
       containers:
         - name: bookstore1
-          image: us-west1-docker.pkg.dev/zerok-dev/test-apps-public/zk-bookstore-app:latest
+          image: us-west1-docker.pkg.dev/zerok-dev/test-apps-public/zk-bookstore-app:test-logs
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

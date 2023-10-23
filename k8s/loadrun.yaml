@@ -18,7 +18,7 @@ spec:
       containers:
         - args:
             - |-
-              while true; do sleep 15; curl -w "[%{http_code}] %{url} %{time_total}s \n"  http://bookstore1.bookstore.svc.cluster.local/books -o /dev/null -s; done;
+              while true; do sleep 15; curl -H 'traceparent: 00-eeeeeeee'$(tr -dc 'a-f0-9' < /dev/urandom | head -c24)'-'$(tr -dc 'a-f0-9' < /dev/urandom | head -c16)'-01' -w "[%{http_code}] %{url} %{time_total}s \n"  http://bookstore1.bookstore.svc.cluster.local/books/from?target=bookstore2.bookstore.svc.cluster.local -o /dev/null -s; done;
           command:
             - sh
             - -c

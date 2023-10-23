@@ -23,17 +23,33 @@ type Book struct {
 }
 
 func getOtherBooks(w http.ResponseWriter, r *http.Request) {
+	//pritn header names 'traceparent'
+	println("getOtherBooks::checking traceparent")
+	//if r.Header != nil && r.Header["traceparent"] != nil {
+	//	println("getOtherBooks::traceparent: " + r.Header["traceparent"][0])
+	//} else {
+	//	println("getOtherBooks::traceparent: not found")
+	//}
+	for name, headers := range r.Header {
+		for _, value := range headers {
+			fmt.Printf("getOtherBooks::%s: %s\n", name, value)
+		}
+	}
+
 	println("getOtherBooks")
 	target := r.URL.Query().Get("target")
 	if target == "" {
 		http.Error(w, "Target URL not specified", http.StatusBadRequest)
 		return
 	}
-	println(target)
+	println("target = " + target)
 	url := "http://" + target + "/books" // Replace with the actual URL.
+	println("url = " + url)
 
 	// Make the HTTP GET request.
-	response, err := http.Get(url)
+	//response, err := http.Get(url)
+	client := &http.Client{}
+	response, err := client.Get(url)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		//ctx.WriteString(fmt.Sprintf("Failed to make the HTTP GET request: %s", err.Error()))
@@ -74,6 +90,19 @@ func getOtherBooks(w http.ResponseWriter, r *http.Request) {
 }
 
 func list(w http.ResponseWriter, r *http.Request) {
+	println("list::checking traceparent")
+	//if r.Header != nil && r.Header["traceparent"] != nil {
+	//	println("list::traceparent: " + r.Header["traceparent"][0])
+	//} else {
+	//	println("list::traceparent: not found")
+	//}
+
+	for name, headers := range r.Header {
+		for _, value := range headers {
+			fmt.Printf("list::%s: %s\n", name, value)
+		}
+	}
+
 	println("list")
 	books := []Book{
 		{"Mastering Concurrency in Go"},
