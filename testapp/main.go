@@ -7,47 +7,86 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
+	"io/ioutil"
+
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"io"
 	"log"
 	"net/http"
 )
 
-func InitAutoTracer() {
+func printTraceFromContext(ctx context.Context) {
+	trace := oteltrace.SpanContextFromContext(ctx)
+	if trace.HasTraceID() {
+		traceID := trace.TraceID()
+		spanID := trace.SpanID()
+		log.Printf("Before: TraceID: %s, SpanID: %s", traceID, spanID)
+	} else {
+		log.Printf("Before: TraceID: not found, SpanID: not found")
+	}
+}
 
-	ctx := context.Background()
+func customMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		// Log the trace information before the request is processed.
+		printTraceFromContext(ctx)
 
-	client := otlptracehttp.NewClient()
+		// Call the next handler in the chain.
+		next.ServeHTTP(w, r)
 
-	otlpTraceExporter, err := otlptrace.New(ctx, client)
+		// Log the trace information after the request is processed.
+		printTraceFromContext(ctx)
+	})
+}
+
+func initTracer() (*sdktrace.TracerProvider, error) {
+	// Create stdout exporter to be able to retrieve
+	// the collected spans.
+
+	//exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+	//if err != nil {
+	//	return nil, err
+	//}
+	exporter, err := otlptracehttp.New(context.Background(), otlptracehttp.WithEndpoint("aws-otel-collector.aws-collector.svc.cluster.local:4318"), otlptracehttp.WithInsecure())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to create exporter: %v", err)
 	}
 
-	batchSpanProcessor := sdktrace.NewBatchSpanProcessor(otlpTraceExporter)
-
-	tracerProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(batchSpanProcessor),
-		//trace.WithSampler(sdktrace.AlwaysSample()), - please check TracerProvider.WithSampler() implementation for details.
+	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
+	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceName("BookStore"))),
 	)
-
-	otel.SetTracerProvider(tracerProvider)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
-		propagation.TraceContext{}, propagation.Baggage{}))
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	return tp, err
 }
 
 func main() {
-	InitAutoTracer()
+	tp, err := initTracer()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 
-	http.HandleFunc("/books", list)
-	http.HandleFunc("/books/from", getOtherBooks)
+	http.Handle("/books", otelhttp.NewHandler(customMiddleware(http.HandlerFunc(list)), "list"))
+	http.Handle("/books/from", otelhttp.NewHandler(customMiddleware(http.HandlerFunc(getOtherBooks)), "getOtherBooks"))
 
-	// Start the HTTP server.
+	// Start the server and listen on port 8080.
+	fmt.Println("Starting server at port 8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Printf("Failed to start the server: %s\n", err)
+		log.Fatal(err)
 	}
 }
 
@@ -58,17 +97,8 @@ type Book struct {
 
 func getOtherBooks(w http.ResponseWriter, r *http.Request) {
 	//pritn header names 'traceparent'
-	println("getOtherBooks::checking traceparent")
-	//if r.Header != nil && r.Header["traceparent"] != nil {
-	//	println("getOtherBooks::traceparent: " + r.Header["traceparent"][0])
-	//} else {
-	//	println("getOtherBooks::traceparent: not found")
-	//}
-	for name, headers := range r.Header {
-		for _, value := range headers {
-			fmt.Printf("getOtherBooks::%s: %s\n", name, value)
-		}
-	}
+	println(">> getOtherBooks::checking traceparent")
+	printRequestHeaders(r, "getOtherBooks")
 
 	println("getOtherBooks")
 	target := r.URL.Query().Get("target")
@@ -76,39 +106,38 @@ func getOtherBooks(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Target URL not specified", http.StatusBadRequest)
 		return
 	}
-	println("target = " + target)
 	url := "http://" + target + "/books" // Replace with the actual URL.
+	println("target = " + target)
 	println("url = " + url)
 
-	// Make the HTTP GET request.
-	//response, err := http.Get(url)
-
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
-	ctx := baggage.ContextWithoutBaggage(context.Background())
-	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
-	response, err := client.Do(req)
 
-	//client := &http.Client{}
-	//response, err := client.Get(url)
+	var body []byte
+
+	tr := otel.Tracer("Bookstore1")
+	ctx := r.Context()
+	bag, _ := baggage.Parse("username=donuts")
+	reqCtx := baggage.ContextWithBaggage(ctx, bag)
+
+	err := func(reqCtx context.Context) error {
+		rCtx, span := tr.Start(reqCtx, "get books", oteltrace.WithAttributes(semconv.PeerServiceKey.String("BookStore1")))
+		defer span.End()
+		req, _ := http.NewRequestWithContext(rCtx, "GET", url, nil)
+
+		fmt.Printf("Sending request...\n")
+		res, err := client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		body, err = ioutil.ReadAll(res.Body)
+		_ = res.Body.Close()
+
+		return err
+	}(reqCtx)
+
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		//ctx.WriteString(fmt.Sprintf("Failed to make the HTTP GET request: %s", err.Error()))
-		return
-	}
-	defer response.Body.Close()
-
-	// Check if the response status code is OK (200).
-	if response.StatusCode != http.StatusOK {
-		w.WriteHeader(http.StatusBadGateway)
-		//ctx.WriteString(fmt.Sprintf("HTTP GET request failed with status code: %d", response.StatusCode))
-		return
-	}
-
-	// Read the response body.
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		//ctx.WriteString(fmt.Sprintf("Failed to read response body: %s", err.Error()))
+		panic(err)
 		return
 	}
 
@@ -126,22 +155,11 @@ func getOtherBooks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(books)
-	//ctx.Write(resp)
 }
 
 func list(w http.ResponseWriter, r *http.Request) {
-	println("list::checking traceparent")
-	//if r.Header != nil && r.Header["traceparent"] != nil {
-	//	println("list::traceparent: " + r.Header["traceparent"][0])
-	//} else {
-	//	println("list::traceparent: not found")
-	//}
-
-	for name, headers := range r.Header {
-		for _, value := range headers {
-			fmt.Printf("list::%s: %s\n", name, value)
-		}
-	}
+	println(">> list::checking traceparent")
+	printRequestHeaders(r, "list")
 
 	println("list")
 	books := []Book{
@@ -152,4 +170,18 @@ func list(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(books)
+}
+
+func printRequestHeaders(r *http.Request, endpoint string) {
+	//if r.Header != nil && r.Header["traceparent"] != nil {
+	//	println("list::traceparent: " + r.Header["traceparent"][0])
+	//} else {
+	//	println("list::traceparent: not found")
+	//}
+
+	for name, headers := range r.Header {
+		for _, value := range headers {
+			fmt.Printf("%s::%s: %s\n", endpoint, name, value)
+		}
+	}
 }
