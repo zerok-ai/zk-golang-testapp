@@ -54,7 +54,7 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 	//	return nil, err
 	//}
 
-	collectorEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	collectorEndpoint := os.Getenv("ZEROK_EXPORTER_OTLP_ENDPOINT")
 	if collectorEndpoint == "" {
 		collectorEndpoint = "aws-otel-collector.aws-collector.svc.cluster.local"
 	}
