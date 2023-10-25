@@ -13,6 +13,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"io/ioutil"
+	"os"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"log"
@@ -52,7 +53,12 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 	//if err != nil {
 	//	return nil, err
 	//}
-	exporter, err := otlptracehttp.New(context.Background(), otlptracehttp.WithEndpoint("aws-otel-collector.aws-collector.svc.cluster.local:4318"), otlptracehttp.WithInsecure())
+
+	collectorEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	if collectorEndpoint == "" {
+		collectorEndpoint = "aws-otel-collector.aws-collector.svc.cluster.local"
+	}
+	exporter, err := otlptracehttp.New(context.Background(), otlptracehttp.WithEndpoint(collectorEndpoint+":4318"), otlptracehttp.WithInsecure())
 	if err != nil {
 		log.Fatalf("failed to create exporter: %v", err)
 	}
