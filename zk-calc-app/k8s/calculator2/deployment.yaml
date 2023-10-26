@@ -19,7 +19,7 @@ spec:
         beta.kubernetes.io/arch: amd64
       containers:
         - name: zk-calc-app-02
-          image: us-west1-docker.pkg.dev/zerok-dev/test-apps-public/zk-calc-app:0.0.4-trace-transfer
+          image: us-west1-docker.pkg.dev/zerok-dev/test-apps-public/zk-calc-app:0.0.4-test
           imagePullPolicy: Always
           ports:
             - containerPort: 80

@@ -43,13 +43,13 @@ func getContext(ctx context.Context, traceparent string) context.Context {
 	//split it into four parts
 	//traceparent := "00-ddddddddf403a450d05c41c8c095634c-8d289ea473e34cdb-01"
 
-	md := metadata.New(map[string]string{
-		"traceparent": traceparent, // Replace with your actual access token
-	})
-
-	outCtx := metadata.NewOutgoingContext(ctx, md)
-	return outCtx
-	//return ctx
+	//md := metadata.New(map[string]string{
+	//	"traceparent": traceparent, // Replace with your actual access token
+	//})
+	//
+	//outCtx := metadata.NewOutgoingContext(ctx, md)
+	//return outCtx
+	return ctx
 }
 
 func (s *calculatorServer) Add(ctx context.Context, req *calculator.AddRequest) (*calculator.AddResponse, error) {

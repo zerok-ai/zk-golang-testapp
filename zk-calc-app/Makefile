@@ -1,6 +1,6 @@
 NAME = zk-calc-app
 IMAGE_NAME = zk-calc-app
-IMAGE_VERSION = 0.0.4-trace-transfer
+IMAGE_VERSION = 0.0.4-test
 
 LOCATION ?= us-west1
 PROJECT_ID ?= zerok-dev
