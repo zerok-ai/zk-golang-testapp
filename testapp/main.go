@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -49,13 +50,26 @@ func getOtherBooks(w http.ResponseWriter, r *http.Request) {
 	// Make the HTTP GET request.
 	//response, err := http.Get(url)
 	client := &http.Client{}
-	response, err := client.Get(url)
+	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer([]byte("")))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	response, err := client.Do(req)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		//ctx.WriteString(fmt.Sprintf("Failed to make the HTTP GET request: %s", err.Error()))
 		return
 	}
-	defer response.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			//ctx.WriteString(fmt.Sprintf("Failed to close response body: %s", err.Error()))
+			return
+		}
+	}(response.Body)
 
 	// Check if the response status code is OK (200).
 	if response.StatusCode != http.StatusOK {
