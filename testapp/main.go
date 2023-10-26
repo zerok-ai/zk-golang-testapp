@@ -51,7 +51,7 @@ func getOtherBooks(w http.ResponseWriter, r *http.Request) {
 	//response, err := http.Get(url)
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer([]byte("")))
-	if err != nil {
+	if err != nil || req == nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
