@@ -4,10 +4,18 @@ metadata:
   name: demo-instrumentation-golang
 spec:
   exporter:
-    endpoint: http://opentelemetry-collector.default.svc.cluster.local:4318
+    endpoint: http://opentelemetry-collector.default.svc.cluster.local:4317
   propagators:
     - tracecontext
     - baggage
-  sampler:
-    type: parentbased_traceidratio
-    argument: "1"
+  go:
+    image: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.3.0-alpha
+    env:
+      - name: OTEL_TRACES_EXPORTER
+        value: otlp
+      - name: OTEL_METRICS_EXPORTER
+        value: none
+      - name: OTEL_LOGS_EXPORTER
+        value: none
+      - name: OTEL_LOG_LEVEL
+        value: DEBUG
