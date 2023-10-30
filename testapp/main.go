@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -50,7 +49,7 @@ func getOtherBooks(w http.ResponseWriter, r *http.Request) {
 	// Make the HTTP GET request.
 	//response, err := http.Get(url)
 	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer([]byte("")))
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil || req == nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
