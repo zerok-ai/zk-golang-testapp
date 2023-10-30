@@ -58,6 +58,12 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 	if collectorEndpoint == "" {
 		collectorEndpoint = "aws-otel-collector.aws-collector.svc.cluster.local"
 	}
+
+	serviceName := os.Getenv("ZEROK_SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = "BookStore"
+	}
+
 	exporter, err := otlptracehttp.New(context.Background(), otlptracehttp.WithEndpoint(collectorEndpoint+":4318"), otlptracehttp.WithInsecure())
 	if err != nil {
 		log.Fatalf("failed to create exporter: %v", err)
@@ -68,7 +74,7 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(resource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceName("BookStore"))),
+		sdktrace.WithResource(resource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceName(serviceName))),
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
@@ -106,6 +112,11 @@ func getOtherBooks(w http.ResponseWriter, r *http.Request) {
 	println(">> getOtherBooks::checking traceparent")
 	printRequestHeaders(r, "getOtherBooks")
 
+	serviceName := os.Getenv("ZEROK_SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = "BookStore"
+	}
+
 	println("getOtherBooks")
 	target := r.URL.Query().Get("target")
 	if target == "" {
@@ -120,13 +131,13 @@ func getOtherBooks(w http.ResponseWriter, r *http.Request) {
 
 	var body []byte
 
-	tr := otel.Tracer("Bookstore1")
+	tr := otel.Tracer(serviceName)
 	ctx := r.Context()
 	bag, _ := baggage.Parse("username=donuts")
 	reqCtx := baggage.ContextWithBaggage(ctx, bag)
 
 	err := func(reqCtx context.Context) error {
-		rCtx, span := tr.Start(reqCtx, "get books", oteltrace.WithAttributes(semconv.PeerServiceKey.String("BookStore1")))
+		rCtx, span := tr.Start(reqCtx, "get books", oteltrace.WithAttributes(semconv.PeerServiceKey.String(serviceName)))
 		defer span.End()
 		req, _ := http.NewRequestWithContext(rCtx, "GET", url, nil)
 
