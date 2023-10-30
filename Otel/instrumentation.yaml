@@ -4,12 +4,16 @@ metadata:
   name: demo-instrumentation-golang
 spec:
   exporter:
-    endpoint: http://opentelemetry-collector.default.svc.cluster.local:4317
+#    endpoint: http://aws-otel-collector.aws-collector.svc.cluster.local:4317
+#    endpoint: http://opentelemetry-collector.default.svc.cluster.local:4317
+    endpoint: http://simplest-collector.monitoring.svc.cluster.local:4317
   propagators:
     - tracecontext
     - baggage
+    - b3
   go:
     image: ghcr.io/open-telemetry/opentelemetry-go-instrumentation/autoinstrumentation-go:v0.7.0-alpha
+#    image: keyval/otel-go-agent:v0.6.5
     env:
       - name: OTEL_TRACES_EXPORTER
         value: otlp
@@ -19,3 +23,5 @@ spec:
         value: none
       - name: OTEL_LOG_LEVEL
         value: DEBUG
+      - name: OTEL_TARGET_EXE
+        value: /testapp/testapp
